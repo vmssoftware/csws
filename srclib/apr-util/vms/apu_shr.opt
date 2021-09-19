@@ -1,0 +1,311 @@
+IDENTIFICATION="CSWS V2.4"              ! CSWS version (as per Apache/HTTPD)
+BUILD_IDENT="APU V1.6.1"                ! APR Utils version
+GSMATCH=LEQUAL,1,0
+!
+libaprutil.olb/lib
+libexpat.olb/lib
+[--.apr.vms]apache$apr_shr.exe/share
+!
+LDAP$ROOT:[LIB.IA64]LDAP$LIBLDAP32.OLB/lib	! BRC 20-Jun-2021
+LDAP$ROOT:[LIB.IA64]LDAP$LIBLBER32.OLB/lib	! BRC 20-Jun-2021
+ssl111$root:[lib]SSL111$LIBSSL32.OLB/lib	! BRC 20-Jun-2021
+ssl111$root:[lib]SSL111$LIBCRYPTO32.OLB/lib	! BRC 20-Jun-2021
+!
+!
+!
+CASE_SENSITIVE=YES
+!
+SYMBOL_VECTOR = ( -
+	_crypt_blowfish_rn = PROCEDURE, -
+	_crypt_gensalt_blowfish_rn = PROCEDURE, -
+	_crypt_output_magic = PROCEDURE -
+)
+!
+SYMBOL_VECTOR = ( -
+	apr_base64_decode = PROCEDURE, -
+	apr_base64_decode_binary = PROCEDURE, -
+	apr_base64_decode_len = PROCEDURE, -
+	apr_base64_encode = PROCEDURE, -
+	apr_base64_encode_binary = PROCEDURE, -
+	apr_base64_encode_len = PROCEDURE, -
+	apr_bcrypt_encode = PROCEDURE, -
+	apr_brigade_cleanup = PROCEDURE, -
+	apr_brigade_create = PROCEDURE, -
+	apr_brigade_destroy = PROCEDURE, -
+	apr_brigade_flatten = PROCEDURE, -
+	apr_brigade_insert_file = PROCEDURE, -
+	apr_brigade_length = PROCEDURE, -
+	apr_brigade_partition = PROCEDURE, -
+	apr_brigade_pflatten = PROCEDURE, -
+	apr_brigade_printf = PROCEDURE, -
+	apr_brigade_putc = PROCEDURE, -
+	apr_brigade_puts = PROCEDURE, -
+	apr_brigade_putstrs = PROCEDURE, -
+	apr_brigade_split = PROCEDURE, -
+	apr_brigade_split_ex = PROCEDURE, -
+	apr_brigade_split_line = PROCEDURE, -
+	apr_brigade_to_iovec = PROCEDURE, -
+	apr_brigade_vprintf = PROCEDURE, -
+	apr_brigade_vputstrs = PROCEDURE, -
+	apr_brigade_write = PROCEDURE, -
+	apr_brigade_writev = PROCEDURE, -
+	apr_bucket_alloc = PROCEDURE, -
+	apr_bucket_alloc_create = PROCEDURE, -
+	apr_bucket_alloc_create_ex = PROCEDURE, -
+	apr_bucket_alloc_destroy = PROCEDURE, -
+	apr_bucket_copy_notimpl = PROCEDURE, -
+	apr_bucket_destroy_noop = PROCEDURE, -
+	apr_bucket_eos_create = PROCEDURE, -
+	apr_bucket_eos_make = PROCEDURE, -
+	apr_bucket_file_create = PROCEDURE, -
+	apr_bucket_file_enable_mmap = PROCEDURE, -
+	apr_bucket_file_make = PROCEDURE, -
+	apr_bucket_flush_create = PROCEDURE, -
+	apr_bucket_flush_make = PROCEDURE, -
+	apr_bucket_free = PROCEDURE, -
+	apr_bucket_heap_create = PROCEDURE, -
+	apr_bucket_heap_make = PROCEDURE, -
+	apr_bucket_immortal_create = PROCEDURE, -
+	apr_bucket_immortal_make = PROCEDURE, -
+	apr_bucket_mmap_create = PROCEDURE, -
+	apr_bucket_mmap_make = PROCEDURE, -
+	apr_bucket_pipe_create = PROCEDURE, -
+	apr_bucket_pipe_make = PROCEDURE, -
+	apr_bucket_pool_create = PROCEDURE, -
+	apr_bucket_pool_make = PROCEDURE, -
+	apr_bucket_setaside_noop = PROCEDURE, -
+	apr_bucket_setaside_notimpl = PROCEDURE, -
+	apr_bucket_shared_copy = PROCEDURE, -
+	apr_bucket_shared_destroy = PROCEDURE, -
+	apr_bucket_shared_make = PROCEDURE, -
+	apr_bucket_shared_split = PROCEDURE, -
+	apr_bucket_simple_copy = PROCEDURE, -
+	apr_bucket_simple_split = PROCEDURE, -
+	apr_bucket_socket_create = PROCEDURE, -
+	apr_bucket_socket_make = PROCEDURE, -
+	apr_bucket_split_notimpl = PROCEDURE, -
+	apr_bucket_transient_create = PROCEDURE, -
+	apr_bucket_transient_make = PROCEDURE, -
+	apr_bucket_type_eos = DATA, -
+	apr_bucket_type_file = DATA, -
+	apr_bucket_type_flush = DATA, -
+	apr_bucket_type_heap = DATA, -
+	apr_bucket_type_immortal = DATA, -
+	apr_bucket_type_mmap = DATA, -
+	apr_bucket_type_pipe = DATA, -
+	apr_bucket_type_pool = DATA, -
+	apr_bucket_type_socket = DATA, -
+	apr_bucket_type_transient = DATA, -
+	apr_current_hooking_module = DATA, -
+	apr_date_checkmask = PROCEDURE, -
+	apr_date_parse_http = PROCEDURE, -
+	apr_date_parse_rfc = PROCEDURE, -
+	apr_dbd_check_conn = PROCEDURE, -
+	apr_dbd_close = PROCEDURE, -
+	apr_dbd_datum_get = PROCEDURE, -
+	apr_dbd_error = PROCEDURE, -
+	apr_dbd_escape = PROCEDURE, -
+	apr_dbd_get_driver = PROCEDURE, -
+	apr_dbd_get_entry = PROCEDURE, -
+	apr_dbd_get_name = PROCEDURE, -
+	apr_dbd_get_row = PROCEDURE, -
+	apr_dbd_init = PROCEDURE, -
+	apr_dbd_mutex_lock = PROCEDURE, -
+	apr_dbd_mutex_unlock = PROCEDURE, -
+	apr_dbd_name = PROCEDURE, -
+	apr_dbd_native_handle = PROCEDURE, -
+	apr_dbd_num_cols = PROCEDURE, -
+	apr_dbd_num_tuples = PROCEDURE, -
+	apr_dbd_open = PROCEDURE, -
+	apr_dbd_open_ex = PROCEDURE, -
+	apr_dbd_pbquery = PROCEDURE, -
+	apr_dbd_pbselect = PROCEDURE, -
+	apr_dbd_pquery = PROCEDURE, -
+	apr_dbd_prepare = PROCEDURE, -
+	apr_dbd_pselect = PROCEDURE, -
+	apr_dbd_pvbquery = PROCEDURE, -
+	apr_dbd_pvbselect = PROCEDURE, -
+	apr_dbd_pvquery = PROCEDURE, -
+	apr_dbd_pvselect = PROCEDURE, -
+	apr_dbd_query = PROCEDURE, -
+	apr_dbd_select = PROCEDURE, -
+	apr_dbd_set_dbname = PROCEDURE, -
+	apr_dbd_transaction_end = PROCEDURE, -
+	apr_dbd_transaction_mode_get = PROCEDURE, -
+	apr_dbd_transaction_mode_set = PROCEDURE, -
+	apr_dbd_transaction_start = PROCEDURE, -
+	apr_dbm_close = PROCEDURE, -
+	apr_dbm_delete = PROCEDURE, -
+	apr_dbm_exists = PROCEDURE, -
+	apr_dbm_fetch = PROCEDURE, -
+	apr_dbm_firstkey = PROCEDURE, -
+	apr_dbm_freedatum = PROCEDURE, -
+	apr_dbm_get_usednames = PROCEDURE, -
+	apr_dbm_get_usednames_ex = PROCEDURE, -
+	apr_dbm_geterror = PROCEDURE, -
+	apr_dbm_nextkey = PROCEDURE, -
+	apr_dbm_open = PROCEDURE, -
+	apr_dbm_open_ex = PROCEDURE, -
+	apr_dbm_store = PROCEDURE, -
+	apr_dbm_type_sdbm = DATA, -
+	apr_debug_module_hooks = DATA, -
+	apr_dynamic_fn_register = PROCEDURE, -
+	apr_dynamic_fn_retrieve = PROCEDURE, -
+	apr_global_hook_pool = DATA, -
+	apr_hook_debug_current = DATA, -
+	apr_hook_debug_enabled = DATA, -
+	apr_hook_debug_show = PROCEDURE, -
+	apr_hook_deregister_all = PROCEDURE, -
+	apr_hook_global_pool = DATA, -
+	apr_hook_sort_all = PROCEDURE, -
+	apr_hook_sort_register = PROCEDURE, -
+	apr_md4 = PROCEDURE, -
+	apr_md4_final = PROCEDURE, -
+	apr_md4_init = PROCEDURE, -
+	apr_md4_set_xlate = PROCEDURE, -
+	apr_md4_update = PROCEDURE, -
+	apr_md5 = PROCEDURE, -
+	apr_md5_encode = PROCEDURE, -
+	apr_md5_final = PROCEDURE, -
+	apr_md5_init = PROCEDURE, -
+	apr_md5_set_xlate = PROCEDURE, -
+	apr_md5_update = PROCEDURE, -
+	apr_memcache_add = PROCEDURE, -
+	apr_memcache_add_multget_key = PROCEDURE, -
+	apr_memcache_add_server = PROCEDURE, -
+	apr_memcache_create = PROCEDURE, -
+	apr_memcache_decr = PROCEDURE, -
+	apr_memcache_delete = PROCEDURE, -
+	apr_memcache_disable_server = PROCEDURE, -
+	apr_memcache_enable_server = PROCEDURE, -
+	apr_memcache_find_serve2jv8gpa$ = PROCEDURE, -
+	apr_memcache_find_server = PROCEDURE, -
+	apr_memcache_find_server_hash = PROCEDURE, -
+	apr_memcache_getp = PROCEDURE, -
+	apr_memcache_hash = PROCEDURE, -
+	apr_memcache_hash_crc32 = PROCEDURE, -
+	apr_memcache_hash_default = PROCEDURE, -
+	apr_memcache_incr = PROCEDURE, -
+	apr_memcache_multgetp = PROCEDURE, -
+	apr_memcache_replace = PROCEDURE, -
+	apr_memcache_server_create = PROCEDURE, -
+	apr_memcache_set = PROCEDURE, -
+	apr_memcache_stats = PROCEDURE, -
+	apr_memcache_version = PROCEDURE, -
+	apr_optional_hook_add = PROCEDURE, -
+	apr_optional_hook_get = PROCEDURE, -
+	apr_password_validate = PROCEDURE, -
+	apr_posix_perms2mode = PROCEDURE, -
+	apr_reslist_acquire = PROCEDURE, -
+	apr_reslist_acquired_count = PROCEDURE, -
+	apr_reslist_cleanup_order_set = PROCEDURE, -
+	apr_reslist_create = PROCEDURE, -
+	apr_reslist_destroy = PROCEDURE, -
+	apr_reslist_invalidate = PROCEDURE, -
+	apr_reslist_maintain = PROCEDURE, -
+	apr_reslist_release = PROCEDURE, -
+	apr_reslist_timeout_set = PROCEDURE, -
+	apr_rmm_addr_get = PROCEDURE, -
+	apr_rmm_attach = PROCEDURE, -
+	apr_rmm_calloc = PROCEDURE, -
+	apr_rmm_destroy = PROCEDURE, -
+	apr_rmm_detach = PROCEDURE, -
+	apr_rmm_free = PROCEDURE, -
+	apr_rmm_init = PROCEDURE, -
+	apr_rmm_malloc = PROCEDURE, -
+	apr_rmm_offset_get = PROCEDURE, -
+	apr_rmm_overhead_get = PROCEDURE, -
+	apr_rmm_realloc = PROCEDURE, -
+	apr_sdbm_close = PROCEDURE, -
+	apr_sdbm_delete = PROCEDURE, -
+	apr_sdbm_fetch = PROCEDURE, -
+	apr_sdbm_firstkey = PROCEDURE, -
+	apr_sdbm_lock = PROCEDURE, -
+	apr_sdbm_nextkey = PROCEDURE, -
+	apr_sdbm_open = PROCEDURE, -
+	apr_sdbm_rdonly = PROCEDURE, -
+	apr_sdbm_store = PROCEDURE, -
+	apr_sdbm_unlock = PROCEDURE, -
+	apr_sha1_base64 = PROCEDURE, -
+	apr_sha1_final = PROCEDURE, -
+	apr_sha1_init = PROCEDURE, -
+	apr_sha1_update = PROCEDURE, -
+	apr_sha1_update_binary = PROCEDURE, -
+	apr_strmatch_precompile = PROCEDURE, -
+	apr_text_append = PROCEDURE, -
+	apr_uri_parse = PROCEDURE, -
+	apr_uri_parse_hostinfo = PROCEDURE, -
+	apr_uri_port_of_scheme = PROCEDURE, -
+	apr_uri_unparse = PROCEDURE, -
+	apr_uuid_format = PROCEDURE, -
+	apr_uuid_get = PROCEDURE, -
+	apr_uuid_parse = PROCEDURE, -
+	apr_xlate_close = PROCEDURE, -
+	apr_xlate_conv_buffer = PROCEDURE, -
+	apr_xlate_conv_byte = PROCEDURE, -
+	apr_xlate_open = PROCEDURE, -
+	apr_xlate_sb_get = PROCEDURE, -
+	apr_xml_empty_elem = PROCEDURE, -
+	apr_xml_insert_uri = PROCEDURE, -
+	apr_xml_parse_file = PROCEDURE, -
+	apr_xml_parser_create = PROCEDURE, -
+	apr_xml_parser_done = PROCEDURE, -
+	apr_xml_parser_feed = PROCEDURE, -
+	apr_xml_parser_geterror = PROCEDURE, -
+	apr_xml_quote_elem = PROCEDURE, -
+	apr_xml_quote_string = PROCEDURE, -
+	apr_xml_to_text = PROCEDURE -
+)
+!
+SYMBOL_VECTOR = ( -
+	apu_version = PROCEDURE, -
+	apu_version_string = PROCEDURE -
+)
+!
+SYMBOL_VECTOR = ( -
+	apu__sdbm_chkpage = PROCEDURE, -
+	apu__sdbm_delpair = PROCEDURE, -
+	apu__sdbm_duppair = PROCEDURE, -
+	apu__sdbm_fitpair = PROCEDURE, -
+	apu__sdbm_getnkey = PROCEDURE, -
+	apu__sdbm_getpair = PROCEDURE, -
+	apu__sdbm_hash = PROCEDURE, -
+	apu__sdbm_nullitem = DATA, -
+	apu__sdbm_putpair = PROCEDURE, -
+	apu__sdbm_splpage = PROCEDURE -
+)
+!
+!
+SYMBOL_VECTOR = ( -
+	apr_ldap_get_option = PROCEDURE, -
+	apr_ldap_info = PROCEDURE, -
+	apr_ldap_init = PROCEDURE, -
+	apr_ldap_is_ldap_url = PROCEDURE, -
+	apr_ldap_is_ldapi_url = PROCEDURE, -
+	apr_ldap_is_ldaps_url = PROCEDURE, -
+	apr_ldap_rebind_add = PROCEDURE, -
+	apr_ldap_rebind_init = PROCEDURE, -
+	apr_ldap_rebind_remove = PROCEDURE, -
+	apr_ldap_set_option = PROCEDURE, -
+	apr_ldap_ssl_deinit = PROCEDURE, -
+	apr_ldap_ssl_init = PROCEDURE, -
+	apr_ldap_url_parse = PROCEDURE, -
+	apr_ldap_url_parse_ext = PROCEDURE -
+)
+!
+!
+SYMBOL_VECTOR = ( -
+	apr_bucket_file_set_buf_size = PROCEDURE -
+)
+!
+!
+SYMBOL_VECTOR = ( -
+        apr_redis_add_server = PROCEDURE, -
+        apr_redis_create = PROCEDURE, -
+        apr_redis_delete = PROCEDURE, -
+        apr_redis_getp = PROCEDURE, -
+        apr_redis_server_create = PROCEDURE, -
+        apr_redis_setex = PROCEDURE, -
+        apr_redis_stats = PROCEDURE -
+)
+!

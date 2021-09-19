@@ -1,0 +1,275 @@
+product VSI I64VMS CSWS V2.4-48b full;
+
+--
+-- Execute the preconfigure procedure
+--
+   	execute preconfigure "@pcsi$source:[sysupd]apache$preconfigure.com" uses [sysupd]apache$preconfigure.com;
+
+--
+-- Check OpenVMS version
+--
+        if ((not <software VSI I64VMS VMS version minimum V8.4>) and (not <software HP I64VMS VMS version minimum V8.4>));
+--      if ((not <software VSI I64VMS VMS version minimum V8.4>));
+	   error NO_MIN_VMS abort;
+        end if;
+
+--
+-- ODS-5 disk(s) should be available on this system
+--
+    	if (<logical name APACHE$ODS5_AVAIL equals 0 table LNM$JOB>);
+           error NO_ODS5_DISKS;
+    	end if;
+
+--
+-- Create and populate the Apache directories
+--
+    	directory [apache] protection private version limit 15;
+
+	file [apache]apache$addnode.com 		protection private;
+	file [apache]apache$adduser.com 		protection private;
+	file [apache]apache$apr_shr.exe 		protection private;
+        file [apache]apache$apr_shrp.exe 		protection private;
+	file [apache]apache$apu_shr.exe 		protection private;
+        file [apache]apache$cert_tool.com 		protection private;
+	file [apache]apache$create_root.com 		protection private;
+	file [apache]apache$delete_root.com 		protection private;
+	file [apache]apache$convert_streamlf.com 	protection private;
+	file [apache]apache$cvt_types.dat 		protection private;
+	file [apache]apache$dcl.com 			protection private;
+	file [apache]apache$dcl_bin.exe 		protection private;
+	file [apache]apache$dcl_env.exe 		protection private;
+	file [apache]apache$dcl_run.exe 		protection private;
+	file [apache]apache$httpd.exe 			protection private;
+	file [apache]apache$httpd_shr.exe 		protection private;
+	file [apache]apache$manage_suexec.com 		protection private;
+	file [apache]apache$menu.com 			protection private;
+	file [apache]apache$set_ccl.exe 		protection private;
+	file [apache]apache$setup.com 			protection private;
+
+        file [apache]license.                           protection private;
+        file [apache]notice.                            protection private;
+
+--
+-- Create and populate the Apache bin directory
+--
+    	directory [apache.bin] protection private version limit 15;
+
+	file [apache.bin]ab.exe 			protection private;
+	file [apache.bin]htdbm.exe 			protection private;
+	file [apache.bin]htdigest.exe 			protection private;
+	file [apache.bin]htpasswd.exe 			protection private;
+	file [apache.bin]logresolve.exe 		protection private;
+	file [apache.bin]rotatelogs.exe 		protection private;
+	file [apache.bin]suexec.exe 			protection private;
+
+--
+-- Create and populate the Apache module directory
+--
+    	directory [apache.modules] protection private version limit 15;
+
+	file [apache.modules]mod_access_compat.exe 		protection private;
+	file [apache.modules]mod_actions.exe 			protection private;
+	file [apache.modules]mod_alias.exe 			protection private;
+	file [apache.modules]mod_allowmethods.exe 		protection private;
+	file [apache.modules]mod_asis.exe 			protection private;
+	file [apache.modules]mod_authnz_ldap.exe 		protection private;
+	file [apache.modules]mod_authn_anon.exe 		protection private;
+	file [apache.modules]mod_authn_core.exe 		protection private;
+	file [apache.modules]mod_authn_dbd.exe 			protection private;
+	file [apache.modules]mod_authn_dbm.exe 			protection private;
+	file [apache.modules]mod_authn_file.exe 		protection private;
+	file [apache.modules]mod_authn_socache.exe 		protection private;
+	file [apache.modules]mod_authz_core.exe 		protection private;
+	file [apache.modules]mod_authz_dbd.exe 			protection private;
+	file [apache.modules]mod_authz_dbm.exe 			protection private;
+	file [apache.modules]mod_authz_groupfile.exe 		protection private;
+	file [apache.modules]mod_authz_host.exe 		protection private;
+	file [apache.modules]mod_authz_owner.exe 		protection private;
+	file [apache.modules]mod_authz_user.exe 		protection private;
+	file [apache.modules]mod_auth_basic.exe 		protection private;
+	file [apache.modules]mod_auth_digest.exe 		protection private;
+	file [apache.modules]mod_auth_form.exe 			protection private;
+	file [apache.modules]mod_authnz_openvms.exe 		protection private;
+	file [apache.modules]mod_autoindex.exe 			protection private;
+	file [apache.modules]mod_buffer.exe 			protection private;
+	file [apache.modules]mod_cache.exe 			protection private;
+	file [apache.modules]mod_cache_disk.exe 		protection private;
+	file [apache.modules]mod_cache_socache.exe 		protection private;
+	file [apache.modules]mod_cern_meta.exe 			protection private;
+	file [apache.modules]mod_cgi.exe 			protection private;
+	file [apache.modules]mod_charset_lite.exe 		protection private;
+	file [apache.modules]mod_dav.exe 			protection private;
+	file [apache.modules]mod_dav_fs.exe 			protection private;
+	file [apache.modules]mod_dbd.exe 			protection private;
+	file [apache.modules]mod_deflate.exe 			protection private;
+	file [apache.modules]mod_dir.exe 			protection private;
+	file [apache.modules]mod_dumpio.exe 			protection private;
+	file [apache.modules]mod_echo.exe 			protection private;
+	file [apache.modules]mod_env.exe 			protection private;
+	file [apache.modules]mod_expires.exe 			protection private;
+	file [apache.modules]mod_ext_filter.exe 		protection private;
+	file [apache.modules]mod_file_cache.exe 		protection private;
+	file [apache.modules]mod_filter.exe 			protection private;
+	file [apache.modules]mod_headers.exe 			protection private;
+	file [apache.modules]mod_include.exe 			protection private;
+	file [apache.modules]mod_info.exe 			protection private;
+	file [apache.modules]mod_isapi.exe 			protection private;
+	file [apache.modules]mod_osuscript.exe 			protection private;
+	file [apache.modules]mod_lbmethod_bybusyness.exe 	protection private;
+	file [apache.modules]mod_lbmethod_byrequests.exe 	protection private;
+	file [apache.modules]mod_lbmethod_bytraffic.exe 	protection private;
+	file [apache.modules]mod_lbmethod_heartbeat.exe 	protection private;
+	file [apache.modules]mod_ldap.exe 			protection private;
+	file [apache.modules]mod_logio.exe 			protection private;
+	file [apache.modules]mod_log_config.exe 		protection private;
+	file [apache.modules]mod_log_debug.exe 			protection private;
+	file [apache.modules]mod_macro.exe 			protection private;
+	file [apache.modules]mod_mime.exe 			protection private;
+	file [apache.modules]mod_mime_magic.exe 		protection private;
+	file [apache.modules]mod_negotiation.exe 		protection private;
+	file [apache.modules]mod_proxy.exe 			protection private;
+	file [apache.modules]mod_proxy_ajp.exe 			protection private;
+	file [apache.modules]mod_proxy_balancer.exe 		protection private;
+	file [apache.modules]mod_proxy_connect.exe 		protection private;
+	file [apache.modules]mod_proxy_express.exe 		protection private;
+	file [apache.modules]mod_proxy_fcgi.exe 		protection private;
+	file [apache.modules]mod_proxy_ftp.exe 			protection private;
+	file [apache.modules]mod_proxy_http.exe 		protection private;
+	file [apache.modules]mod_proxy_scgi.exe 		protection private;
+	file [apache.modules]mod_proxy_wstunnel.exe 		protection private;
+	file [apache.modules]mod_ratelimit.exe 			protection private;
+	file [apache.modules]mod_remoteip.exe 			protection private;
+	file [apache.modules]mod_reqtimeout.exe 		protection private;
+	file [apache.modules]mod_request.exe 			protection private;
+	file [apache.modules]mod_rewrite.exe 			protection private;
+	file [apache.modules]mod_sed.exe 			protection private;
+	file [apache.modules]mod_session.exe 			protection private;
+	file [apache.modules]mod_session_cookie.exe 		protection private;
+	file [apache.modules]mod_session_dbd.exe 		protection private;
+	file [apache.modules]mod_setenvif.exe 			protection private;
+	file [apache.modules]mod_slotmem_shm.exe 		protection private;
+	file [apache.modules]mod_socache_dbm.exe 		protection private;
+	file [apache.modules]mod_socache_memcache.exe 		protection private;
+	file [apache.modules]mod_socache_shmcb.exe 		protection private;
+	file [apache.modules]mod_socache_redis.exe 		protection private;
+	file [apache.modules]mod_speling.exe 			protection private;
+	file [apache.modules]mod_ssl.exe 			protection private;
+	file [apache.modules]mod_status.exe 			protection private;
+	file [apache.modules]mod_substitute.exe 		protection private;
+	file [apache.modules]mod_suexec.exe 			protection private;
+	file [apache.modules]mod_unique_id.exe 			protection private;
+	file [apache.modules]mod_unixd.exe 			protection private;
+	file [apache.modules]mod_userdir.exe 			protection private;
+	file [apache.modules]mod_usertrack.exe 			protection private;
+	file [apache.modules]mod_version.exe 			protection private;
+	file [apache.modules]mod_vhost_alias.exe 		protection private;
+--
+-- 	IA64 only...
+	file [apache.modules]mod_wsgi.exe 			protection private;
+
+--
+-- Create and populate the Apache cgi-bin directory
+--
+    	directory [apache.cgi-bin] protection private;
+
+	file [apache.cgi-bin]test-cgi-vms.com 			protection private;
+	file [apache.cgi-bin]test-cgi-vms.exe 			protection private;
+
+--
+-- Create and populate the Apache conf directory
+--
+    	directory [apache.conf] protection private;
+
+	file [apache.conf]httpd-vms.conf 			protection private;
+	file [apache.conf]magic. 				protection private;
+	file [apache.conf]mime.types 				protection private;
+	file [apache.conf]ssl-vms.conf 				protection private;
+
+--
+-- Create and populate the Apache icons directory (gets populated later)
+--
+    	directory [apache.icons] protection private;
+
+--
+-- Create and populate the Apache HTDOCS directory (gets populated later)
+--
+    	directory [apache.htdocs] protection private;
+
+--
+-- Create and populate the Apache logs directory
+--
+    	directory [APACHE.LOGS] protection private version limit 15;
+
+--
+-- Create and populate the Apache OpenVMS kit directory
+--
+    	directory [apache.kit] protection private;
+
+	file [apache.kit]csws_2_4_38.release_notes release notes protection private;
+
+	file [apache.kit]login.com 			protection private;
+	file [apache.kit]apache$config.com 		protection private;
+	file [apache.kit]apache$fis.com 		protection private;
+	file [apache.kit]apache$symbols.com 		protection private;
+	file [apache.kit]apache$startup.com 		protection private;
+	file [apache.kit]apache$shutdown.com 		protection private;
+	file [apache.kit]apache$install_remove.com 	protection private;
+
+--
+-- Create and populate the Apache OpenSSL directories
+--
+   	directory [apache.openssl] 			protection private;
+    	directory [apache.openssl.com] 			protection private;
+
+       	file [apache.openssl.com]openssl_auth_cert.com 	protection private;
+        file [apache.openssl.com]openssl_auto_cert.com 	protection private;
+        file [apache.openssl.com]openssl_conf_util.com 	protection private;
+        file [apache.openssl.com]openssl_draw_box.com 	protection private;
+        file [apache.openssl.com]openssl_fill_box.com 	protection private;
+        file [apache.openssl.com]openssl_hash_cert.com 	protection private;
+        file [apache.openssl.com]openssl_init_env.com 	protection private;
+        file [apache.openssl.com]openssl_init_term.com 	protection private;
+        file [apache.openssl.com]openssl_pick_file.com 	protection private;
+        file [apache.openssl.com]openssl_rqst_cert.com 	protection private;
+        file [apache.openssl.com]openssl_self_cert.com 	protection private;
+        file [apache.openssl.com]openssl_show_file.com 	protection private;
+        file [apache.openssl.com]openssl_sign_cert.com 	protection private;
+        file [apache.openssl.com]openssl_view_cert.com 	protection private;
+
+    	directory [apache.openssl.crt] 			protection private;
+    	directory [apache.openssl.csr] 			protection private;
+    	directory [apache.openssl.db]  			protection private;
+    	directory [apache.openssl.exe] 			protection private;
+
+        file [apache.openssl.exe]hostaddr.exe 		protection private;
+        file [apache.openssl.exe]hostname.exe 		protection private;
+        file [apache.openssl.exe]openssl.exe 		protection private;
+
+    	directory [apache.openssl.key]	 		protection private;
+    	directory [apache.conf.ssl_crl] 		protection private;
+    	directory [apache.conf.ssl_crt] 		protection private;
+    	directory [apache.conf.ssl_csr] 		protection private;
+    	directory [apache.conf.ssl_key] 		protection private;
+    	directory [apache.conf.ssl_prm] 		protection private;
+
+--
+-- Create and populate the include directory (header files required for module development)
+--
+    	directory [apache.include];
+
+	file [apache.include]apache$library.tlb;
+
+--
+-- Now execute the post-install stuff
+--
+    	execute
+	   install "@pcsi$destination:[apache.kit]apache$install_remove.com install"
+	   remove  "@pcsi$destination:[apache.kit]apache$install_remove.com remove" uses ([sysupd]apache$htdocs.bck,[sysupd]apache$icons.bck);
+
+--
+-- Okay, done.  Tell the user what to do next.
+--
+    	information RELEASE_NOTES phase after with helptext;
+    	information POST_INSTALL  phase after with helptext;
+
+end product;

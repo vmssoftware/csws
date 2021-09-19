@@ -1,0 +1,23 @@
+IDENTIFICATION="CSWS V2.4"		! CSWS version (as per Apache/HTTPD)
+BUILD_IDENT="APR V1.7.0"		! APR version
+GSMATCH=LEQUAL,1,0
+!
+libapr_vms.olb/include=(protshr,auth_sysuaf,check_rights)
+!
+CASE_SENSITIVE=YES
+SYMBOL_VECTOR=(-
+    apr$$crembx			= PROCEDURE, -
+    apr$$getpwnam		= PROCEDURE, -
+    apr$$socket			= PROCEDURE, -
+    apr$$setsockopt		= PROCEDURE, -
+    apr$$auth_princ_sysuaf	= PROCEDURE, -
+    apr$$check_rights_list	= PROCEDURE, -
+    apr$$create_galaxy_gblsec	= PROCEDURE  -
+)
+!
+! Setup the user written system service information
+!
+PSECT=USER_SERVICES,VEC,NOWRT,NOEXE
+COLLECT=PLV,USER_SERVICES
+!
+!

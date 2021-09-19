@@ -1,0 +1,88 @@
+=product VSI I64VMS CSWS V2.4-48b full
+1 'PRODUCER
+=prompt VMS Software Inc. & The Apache Software Foundation.
+
+The Secure Web Server for OpenVMS [based on Apache] is supplied by
+VMS Software Inc., based on the open source distributed by the
+Apache Software foundaton.
+
+1 'LICENSE
+
+1 'PRODUCT
+Apache HTTP server software, version V2.4, ported to OpenVMS from Apache V2.4.48.
+
+1 'NOTICE
+
+1 NO_MIN_VMS
+=prompt Minimum OpenVMS software version not found on this system, abort instalation
+This kit requires a minimum OpenVMS software version of V8.4-1H1.
+
+1 NO_ODS5_DISKS
+=prompt ODS-5 disk(s) not found on this system, abort installation
+This kit requires an ODS-5 disk to be correctly installed in this system.
+
+1 RELEASE_NOTES
+=prompt Release notes are available in SYS$HELP:CSWS_2_4_38.release_notes.
+
+VMS Software Inc. highly recommends that you read these release notes.
+
+1 POST_INSTALL
+=prompt Post-installation tasks are required.
+
+The OpenVMS Installation and Configuration Guide gives detailed directions.
+This information is a brief checklist.
+
+
+Configure OpenVMS aspects of the web server by:
+
+    $ @SYS$MANAGER:APACHE$CONFIG
+
+If the OpenVMS username APACHE$WWW does not exist, you will be
+prompted to create that username.  File ownerships are set to UIC
+[APACHE$WWW], etc.
+
+After configuration, start the web server manually by entering:
+
+    $ @SYS$STARTUP:APACHE$STARTUP
+
+Check that neither SYLOGIN.COM nor the LOGIN.COM write any output to
+SYS$OUTPUT:.  Look especially for a
+
+    $ SET TERMINAL/INQUIRE.
+
+Start the web server at system boot time by adding the following
+lines to SYS$MANAGER:SYSTARTUP_VMS.COM:
+
+    $ file := SYS$STARTUP:APACHE$STARTUP.COM
+    $ if f$search("''file'") .nes. "" then @'file'
+
+Shutdown the Apache server at system shutdown time by adding the
+following lines to SYS$MANAGER:SYSHUTDWN.COM:
+
+    $ file := SYS$STARTUP:APACHE$SHUTDOWN.COM
+    $ if f$search("''file'") .nes. "" then @'file'
+
+Test the installation using your favorite Web browser.
+Replace host.domain in the following URL (Uniform Resource Locator)
+with the information for the web server just installed, configured,
+and started.
+
+URL http://host.domain/ should display the standard introductory page
+from the Apache Software Foundation. This has the bold text "It
+Works!" If you do not see this page, check the release notes.
+
+If you'd like to use secure connections then you'll need to create
+a server certificate.  We recommend that you start by creating a 30
+day self-signed certificate using the following certificate tool:
+
+    $ @APACHE$COMMON:[OPENSSL.COM]OPENSSL_AUTO_CERT.COM
+
+Once the certificate has been created you'll need to uncomment the
+following directive in the APACHE$COMMON:[CONF]HTTPD.CONF file to
+enable SSL.
+
+    Include /apache$root/conf/ssl.conf
+
+Thank you for using the Secure Web Server.
+
+

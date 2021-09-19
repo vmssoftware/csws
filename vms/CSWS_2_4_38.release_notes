@@ -1,0 +1,24 @@
+
+      Secure Web Server V2.4 for OpenVMS IA64
+                                       [based on Apache]
+
+      Release Notes
+
+      June 2019
+
+      CSWS V2.4-38b
+      VSI-I64VMS-CSWS-V0204-38B-1.PCSI
+      Based on Apache V2.4.38
+
+      ------------------------
+
+      We're pleased to provide you with this Production release of the
+      Secure Web Server V2.4-38 for OpenVMS IA64.
+
+      The Secure Web Server includes Secure Sockets Layer (SSL) mod_ssl
+      and OpenSSL (based on OpenSSL 1.0.2r).
+
+      This release addresses a bug that prevented CSWS from correctly
+      starting additional worker processes when under load. Problems
+      relating to use of the web server with IPv6 have also been addressed.
+

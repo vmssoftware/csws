@@ -1,0 +1,23 @@
+$! OSU scripts...
+$
+$!! ccopt = "/define=(_USE_STD_STAT,DEBUG)/names=(as_is,shortened)/nolist"
+$ ccopt = "/define=(_USE_STD_STAT)/names=(as_is,shortened)/nolist"
+$ cc'ccopt' mod_osuscript.c + apache$root:[include]apache$library.tlb/lib
+$ cc'ccopt' decnet_io.c
+$
+$ link/share=mod_osuscript.exe mod_osuscript.obj,decnet_io.obj,sys$input/opt
+apache$apr_shr/share
+apache$apu_shr/share
+apache$httpd_shr/share
+CASE_SENSITIVE=YES
+SYMBOL_VECTOR=(osuscript_module=DATA)
+$
+$ purge/log
+$ delete/log/noconf *.obj;*
+$
+$ copy/log mod_osuscript.exe APACHE$COMMON:[MODULES]
+$ purge APACHE$COMMON:[MODULES]
+$
+$ @sys$startup:apache$shutdown
+$ @sys$startup:apache$startup
+$ exit

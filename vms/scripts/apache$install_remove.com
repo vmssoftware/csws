@@ -1,0 +1,797 @@
+$!
+$!------------------------------------------------------------------------------
+$! APACHE$INSTALL_REMOVE.COM
+$!------------------------------------------------------------------------------
+$!
+$ Verify = F$VERIFY (0)
+$ Parse_Style = F$GETJPI ("", "PARSE_STYLE_PERM")
+$ Set NoOn
+$!
+$! Set the process parse style to extended
+$!
+$ SET PROCESS/PARSE_STYLE=EXTENDED
+$!
+$!------------------------------------------------------------------------------
+$! Open the terminal device in case we're being run in a spawned process
+$!------------------------------------------------------------------------------
+$!
+$ MASTER_PID = F$GETJPI ("", "MASTER_PID")
+$!
+$ IF MASTER_PID .NES. F$GETJPI ("", "PID")
+$ THEN
+$     MASTER_TTY = F$GETJPI (MASTER_PID, "TERMINAL")
+$     OPEN /WRITE TTY$COMMAND 'MASTER_TTY'
+$     ASK := READ TTY$COMMAND /END_OF_FILE=EXIT /PROMPT=
+$     SAY := WRITE TTY$COMMAND
+$ ELSE
+$     ASK := READ SYS$COMMAND /END_OF_FILE=EXIT /PROMPT=
+$     SAY := WRITE SYS$COMMAND
+$ ENDIF
+$!
+$ FILE_STATUS == 1
+$!
+$!------------------------------------------------------------------------------
+$! Determine whether we are doing an Install/Remove
+$!------------------------------------------------------------------------------
+$!
+$ P1 = F$EDIT  (P1, "TRIM,UPCASE")
+$ IF P1 .EQS. "INSTALL" THEN GOTO INSTALL
+$ IF P1 .EQS. "REMOVE" THEN GOTO REMOVE
+$ GOTO EXIT
+$!
+$!------------------------------------------------------------------------------
+$! Run the Apache Product Install
+$!------------------------------------------------------------------------------
+$!
+$INSTALL:
+$!
+$! Verify that the installation disk is ODS-5, if not then cleanup and exit
+$!
+$ IF F$GETDVI ("PCSI$DESTINATION", "ACPTYPE") .NES. "F11V5"
+$ THEN
+$     SAY " "
+$     SAY "Destination disk is not ODS-5, aborting installation ..."
+$     SAY " "
+$     STATUS = 44
+$     GOTO EXIT
+$ ENDIF
+$!
+$! Copy the Apache files from the kit directory
+$!
+$ KITDIR := PCSI$DESTINATION:[APACHE.KIT]
+$!
+$ COPY /NOLOG /NOCONFIRM 'KITDIR'APACHE$CONFIG.COM SYS$COMMON:[SYSMGR]APACHE$CONFIG.COM
+$ SET FILE /PROT=W:RE SYS$COMMON:[SYSMGR]APACHE$CONFIG.COM
+$ COPY /NOLOG /NOCONFIRM 'KITDIR'APACHE$FIS.COM SYS$COMMON:[SYSMGR]APACHE$FIS.COM
+$ SET FILE /PROT=W:RE SYS$COMMON:[SYSMGR]APACHE$FIS.COM
+$ COPY /NOLOG /NOCONFIRM 'KITDIR'APACHE$SYMBOLS.COM SYS$COMMON:[SYSMGR]APACHE$SYMBOLS.COM
+$ SET FILE /PROT=W:RE SYS$COMMON:[SYSMGR]APACHE$SYMBOLS.COM
+$ COPY /NOLOG /NOCONFIRM 'KITDIR'APACHE$STARTUP.COM SYS$COMMON:[SYS$STARTUP]APACHE$STARTUP.COM
+$ SET FILE /PROT=W:RE SYS$COMMON:[SYS$STARTUP]APACHE$STARTUP.COM
+$ COPY /NOLOG /NOCONFIRM 'KITDIR'APACHE$SHUTDOWN.COM SYS$COMMON:[SYS$STARTUP]APACHE$SHUTDOWN.COM
+$ SET FILE /PROT=W:RE SYS$COMMON:[SYS$STARTUP]APACHE$SHUTDOWN.COM
+$ COPY /NOLOG /NOCONFIRM 'KITDIR'CSWS_2_4_38.release_notes SYS$COMMON:[SYSHLP]CSWS_2_4_38.release_notes
+$ SET FILE /PROT=W:RE SYS$COMMON:[SYSHLP]CSWS_2_4_38.release_notes
+$!
+$ IF F$SEARCH ("PCSI$DESTINATION:[APACHE]LOGIN.COM") .EQS. ""
+$ THEN
+$     COPY /NOLOG /NOCONFIRM 'KITDIR'LOGIN.COM PCSI$DESTINATION:[APACHE]LOGIN.COM
+$ ENDIF
+$!
+$ IF F$SEARCH ("PCSI$DESTINATION:[APACHE.CONF]HTTPD.CONF") .EQS. ""
+$ THEN
+$     if f$getsyi("arch_name") .eqs. "x86_64"
+$     then
+$        COPY /NOLOG /NOCONFIRM PCSI$DESTINATION:[APACHE.CONF]HTTPD-VMS-X86.CONF PCSI$DESTINATION:[APACHE.CONF]HTTPD.CONF
+$     else
+$        COPY /NOLOG /NOCONFIRM PCSI$DESTINATION:[APACHE.CONF]HTTPD-VMS.CONF PCSI$DESTINATION:[APACHE.CONF]HTTPD.CONF
+$     endif
+$     SET FILE /PROT=(G,W) PCSI$DESTINATION:[APACHE.CONF]HTTPD.CONF
+$ ENDIF
+$!
+$ IF F$SEARCH ("PCSI$DESTINATION:[APACHE.CONF]SSL.CONF") .EQS. ""
+$ THEN
+$     COPY /NOLOG /NOCONFIRM PCSI$DESTINATION:[APACHE.CONF]SSL-VMS.CONF PCSI$DESTINATION:[APACHE.CONF]SSL.CONF
+$     SET FILE /PROT=(G,W) PCSI$DESTINATION:[APACHE.CONF]SSL.CONF
+$ ENDIF
+$!
+$ BACKUP /NOLOG /REPLACE PCSI$SOURCE:[SYSUPD]APACHE$ICONS.BCK/SAVE_SET/SELECT=[*...]*.*;* -
+      PCSI$DESTINATION:[APACHE...]*.*;*
+$ BACKUP /NOLOG /REPLACE PCSI$SOURCE:[SYSUPD]APACHE$HTDOCS.BCK/SAVE_SET/SELECT=[*...]*.*;* -
+      PCSI$DESTINATION:[APACHE...]*.*;*
+$!
+$! Define the Apache Installation Root
+$!
+$ INSTALL_PCSI_LOC = F$TRNLNM("PCSI$DESTINATION")
+$ INSTALL_LOC = F$GETDVI("PCSI$DESTINATION","LOGVOLNAM")
+$ INSTALL_DEV = F$PARSE(INSTALL_LOC, "SYS$COMMON:",, "DEVICE")
+$ INSTALL_DIR = F$PARSE(INSTALL_PCSI_LOC, "[000000]",, "DIRECTORY")
+$
+$!
+$! Check for "<>" directory delimiters
+$!
+$ANGLE_LOOP:
+$!
+$ POS = F$LOCATE ("<", INSTALL_DIR)
+$ LEN = F$LENGTH (INSTALL_DIR)
+$ IF POS .LT. LEN
+$ THEN
+$     INSTALL_DIR = F$EXTRACT (0, POS, INSTALL_DIR) + "[" + F$EXTRACT (POS+1, LEN-POS-1, INSTALL_DIR)
+$     POS = F$LOCATE (">", INSTALL_DIR)
+$     INSTALL_DIR = F$EXTRACT (0, POS, INSTALL_DIR) + "]" + F$EXTRACT (POS+1, LEN-POS-1, INSTALL_DIR)
+$     GOTO ANGLE_LOOP
+$ ENDIF
+$!
+$! Check for ".][000000" rooted directory delimiters
+$!
+$ROOT_LOOP:
+$!
+$ POS = F$LOCATE (".][000000.", INSTALL_DIR)
+$ LEN = F$LENGTH (INSTALL_DIR)
+$ IF POS .EQ. LEN THEN POS = F$LOCATE (".][000000]", INSTALL_DIR)
+$ IF POS .NE. LEN
+$ THEN
+$     INSTALL_DIR = F$EXTRACT (0, POS, INSTALL_DIR) + F$EXTRACT (POS+9, LEN-POS-1, INSTALL_DIR)
+$     GOTO ROOT_LOOP
+$ ENDIF
+$!
+$! Check for ".][" rooted directory delimiters
+$!
+$BRACKET_LOOP:
+$!
+$ IF F$LOCATE (".][", INSTALL_DIR) .NE. F$LENGTH (INSTALL_DIR)
+$ THEN
+$     INSTALL_DIR = INSTALL_DIR - "]["
+$     GOTO BRACKET_LOOP
+$ ENDIF
+$!
+$ COMMON_ROOT = INSTALL_DEV + F$EXTRACT (0, F$LENGTH (INSTALL_DIR)-1, INSTALL_DIR) + ".APACHE.]"
+$!
+$! Create the Apache specific path directory tree
+$!
+$ SPECIFIC_NODE = F$EDIT(F$TRNLNM("TCPIP$INET_HOST"),"UPCASE")
+$ IF SPECIFIC_NODE .EQS. "" THEN -
+     SPECIFIC_NODE = F$GETSYI ("NODENAME")
+$ IF SPECIFIC_NODE .EQS. "" THEN -
+     SPECIFIC_NODE = F$EDIT(F$GETSYI ("SCSNODE"), "TRIM,COMPRESS")
+$ IF F$LOCATE(SPECIFIC_NODE, COMMON_ROOT) .NE. F$LENGTH(COMMON_ROOT)
+$ THEN
+$    ALLOCLASS = SPECIFIC_NODE + "$"
+$    COMMON_ROOT = COMMON_ROOT - ALLOCLASS
+$ ELSE
+$    ALLOCLASS = ""
+$ ENDIF
+$ SPECIFIC_ROOT = COMMON_ROOT - "]" + "SPECIFIC"
+$!
+$! Write the Apache logicals file
+$!
+$ ON WARNING THEN GOTO CFG_ERR
+$ ON CONTROL_Y THEN GOTO CFG_ERR
+$!
+$ LOGICALS_FIL = "SYS$COMMON:[SYSMGR]APACHE$LOGICALS.COM"
+$ OPEN /WRITE LOGICALS_LNM 'LOGICALS_FIL'
+$ WRITE LOGICALS_LNM "$ Set NoOn"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$! APACHE$LOGICALS.COM"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ Verify = F$VERIFY (0)"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$! PCSI Installation location (device/directory)"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ INSTALL_LOC = ""''INSTALL_LOC'"""
+$ WRITE LOGICALS_LNM "$ INSTALL_DEV = F$PARSE(INSTALL_LOC,""SYS$COMMON:"",,""DEVICE"")"
+$ WRITE LOGICALS_LNM "$ INSTALL_DIR = ""''INSTALL_DIR'"""
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$! Determine the Apache logical name table"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF P1 .EQS. """"
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     LnmCmd = ""Define /NoLog"""
+$ WRITE LOGICALS_LNM "$ ELSE"
+$ WRITE LOGICALS_LNM "$     LnmCmd = P1"
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF P2 .EQS. """"
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     LnmTbl = ""/System /Executive"""
+$ WRITE LOGICALS_LNM "$ ELSE"
+$ WRITE LOGICALS_LNM "$     LnmTbl = P2"
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF P3 .EQS. """"
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     ShrImg = ""Install"""
+$ WRITE LOGICALS_LNM "$ ELSE"
+$ WRITE LOGICALS_LNM "$     ShrImg = P3"
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF P4 .EQS. """"
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     CreateSpecificDir = ""CREATE"""
+$ WRITE LOGICALS_LNM "$ ELSE"
+$ WRITE LOGICALS_LNM "$     CreateSpecificDir = ""NOCREATE"""
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$! Remove the Apache images"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!  APACHE$APR_SHRP"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF F$TRNLNM (""APACHE$APR_SHRP"") .NES. """" .AND. -"
+$ WRITE LOGICALS_LNM "     F$EDIT (ShrImg,""TRIM,UPCASE"") .EQS. ""UNINSTALL"""
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     IF F$FILE_ATTRIBUTES (""APACHE$APR_SHRP"",""KNOWN"")"
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$         DEFINE /USER /NOLOG SYS$ERROR NL:"
+$ WRITE LOGICALS_LNM "$         DEFINE /USER /NOLOG SYS$OUTPUT NL:"
+$ WRITE LOGICALS_LNM "$         INSTALL REMOVE APACHE$APR_SHRP"
+$ WRITE LOGICALS_LNM "$         STATUS = $STATUS"
+$ WRITE LOGICALS_LNM "$         IF F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NORMAL"" .AND. -"
+$ WRITE LOGICALS_LNM "             F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NOMSG"""
+$ WRITE LOGICALS_LNM "$         THEN"
+$ WRITE LOGICALS_LNM "$             WRITE SYS$OUTPUT F$MESSAGE (STATUS)"
+$ WRITE LOGICALS_LNM "$         ENDIF"
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!  APACHE$APR_SHR"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF F$TRNLNM (""APACHE$APR_SHR"") .NES. """" .AND. -"
+$ WRITE LOGICALS_LNM "     F$EDIT (ShrImg,""TRIM,UPCASE"") .EQS. ""UNINSTALL"""
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     IF F$FILE_ATTRIBUTES (""APACHE$APR_SHR"",""KNOWN"")"
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$         DEFINE /USER /NOLOG SYS$ERROR NL:"
+$ WRITE LOGICALS_LNM "$         DEFINE /USER /NOLOG SYS$OUTPUT NL:"
+$ WRITE LOGICALS_LNM "$         INSTALL REMOVE APACHE$APR_SHR"
+$ WRITE LOGICALS_LNM "$         STATUS = $STATUS"
+$ WRITE LOGICALS_LNM "$         IF F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NORMAL"" .AND. -"
+$ WRITE LOGICALS_LNM "             F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NOMSG"""
+$ WRITE LOGICALS_LNM "$         THEN"
+$ WRITE LOGICALS_LNM "$             WRITE SYS$OUTPUT F$MESSAGE (STATUS)"
+$ WRITE LOGICALS_LNM "$         ENDIF"
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!  APACHE$APU_SHR"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF F$TRNLNM (""APACHE$APU_SHR"") .NES. """" .AND. -"
+$ WRITE LOGICALS_LNM "     F$EDIT (ShrImg,""TRIM,UPCASE"") .EQS. ""UNINSTALL"""
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     IF F$FILE_ATTRIBUTES (""APACHE$APU_SHR"",""KNOWN"")"
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$         DEFINE /USER /NOLOG SYS$ERROR NL:"
+$ WRITE LOGICALS_LNM "$         DEFINE /USER /NOLOG SYS$OUTPUT NL:"
+$ WRITE LOGICALS_LNM "$         INSTALL REMOVE APACHE$APU_SHR"
+$ WRITE LOGICALS_LNM "$         STATUS = $STATUS"
+$ WRITE LOGICALS_LNM "$         IF F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NORMAL"" .AND. -"
+$ WRITE LOGICALS_LNM "             F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NOMSG"""
+$ WRITE LOGICALS_LNM "$         THEN"
+$ WRITE LOGICALS_LNM "$             WRITE SYS$OUTPUT F$MESSAGE (STATUS)"
+$ WRITE LOGICALS_LNM "$         ENDIF"
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!  SUEXEC"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF F$TRNLNM (""SUEXEC"") .NES. """" .AND. -"
+$ WRITE LOGICALS_LNM "     F$EDIT (ShrImg,""TRIM,UPCASE"") .EQS. ""UNINSTALL"""
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     IF F$FILE_ATTRIBUTES (""SUEXEC"",""KNOWN"")"
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$         DEFINE /USER /NOLOG SYS$ERROR NL:"
+$ WRITE LOGICALS_LNM "$         DEFINE /USER /NOLOG SYS$OUTPUT NL:"
+$ WRITE LOGICALS_LNM "$         INSTALL REMOVE SUEXEC"
+$ WRITE LOGICALS_LNM "$         STATUS = $STATUS"
+$ WRITE LOGICALS_LNM "$         IF F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NORMAL"" .AND. -"
+$ WRITE LOGICALS_LNM "             F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NOMSG"""
+$ WRITE LOGICALS_LNM "$         THEN"
+$ WRITE LOGICALS_LNM "$             WRITE SYS$OUTPUT F$MESSAGE (STATUS)"
+$ WRITE LOGICALS_LNM "$         ENDIF"
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$! Define the Apache logical names"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF F$EDIT (F$EXTRACT (0,6,LnmCmd), ""TRIM,UPCASE"") .EQS. ""DEFINE"""
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     Host = F$EDIT(F$TRNLNM(""TCPIP$INET_HOST""),""UPCASE"")"
+$ WRITE LOGICALS_LNM "$     IF Host .EQS. """" THEN -"
+$ WRITE LOGICALS_LNM "$         Host = F$GETSYI(""NODENAME"")"
+$ WRITE LOGICALS_LNM "$     IF Host .EQS. """" THEN -"
+$ WRITE LOGICALS_LNM "$         Host = F$EDIT(F$GETSYI(""SCSNODE""), ""TRIM,COMPRESS"")"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$     Device = F$PARSE(INSTALL_DEV,,,""DEVICE"",""NO_CONCEAL"")"
+$ WRITE LOGICALS_LNM "$     COMMON_ROOT = Device + INSTALL_DIR - ""]"" + "".APACHE.]"""
+$ WRITE LOGICALS_LNM "$     SPECIFIC_ROOT = Device + INSTALL_DIR - ""]"" + "".APACHE.SPECIFIC."" + Host + "".]"""
+$ WRITE LOGICALS_LNM "$     SPECIFIC_DIR = Device + INSTALL_DIR - ""]"" + "".APACHE.SPECIFIC]"" + Host + "".DIR"""
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$     IF CreateSpecificDir .EQS. ""CREATE"""
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$        IF F$SEARCH(SPECIFIC_DIR) .EQS. """" THEN GOSUB CreateSpecific
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$COMMON    'COMMON_ROOT'/Translation=(Concealed,Terminal)"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$SPECIFIC  'SPECIFIC_ROOT'/Translation=(Concealed,Terminal)"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$ROOT      APACHE$SPECIFIC,APACHE$COMMON"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$HTTPD_SHR APACHE$COMMON:[000000]APACHE$HTTPD_SHR.EXE"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$APU_SHR   APACHE$COMMON:[000000]APACHE$APU_SHR.EXE"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$APR_SHR   APACHE$COMMON:[000000]APACHE$APR_SHR.EXE"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' SUEXEC           APACHE$COMMON:[BIN]SUEXEC.EXE"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$     Suffix = """""
+$ WRITE LOGICALS_LNM "$!     IF F$GETSYI(""ARCH_NAME"") .EQS. ""Alpha""
+$ WRITE LOGICALS_LNM "$!     THEN"
+$ WRITE LOGICALS_LNM "$!         VMS_Vers = F$GETSYI(""VERSION"")"
+$ WRITE LOGICALS_LNM "$!         IF F$LOCATE(""."", VMS_Vers) .EQ. F$LENGTH(VMS_Vers)"
+$ WRITE LOGICALS_LNM "$!         THEN"
+$ WRITE LOGICALS_LNM "$!             Suffix = ""_V8"""
+$ WRITE LOGICALS_LNM "$!         ELSE"
+$ WRITE LOGICALS_LNM "$!             Eos = F$LOCATE(""-"", VMS_Vers)"
+$ WRITE LOGICALS_LNM "$!             IF Eos .EQ. F$LENGTH(VMS_Vers) THEN Eos = F$LOCATE("" "", VMS_Vers)"
+$ WRITE LOGICALS_LNM "$!             IF F$EXTRACT(1,Eos-1,VMS_Vers) .LTS. ""8.2"" THEN Suffix = ""_V7"""
+$ WRITE LOGICALS_LNM "$!             IF F$EXTRACT(1,Eos-1,VMS_Vers) .GES. ""8.2"" THEN Suffix = ""_V8"""
+$ WRITE LOGICALS_LNM "$!         ENDIF"
+$ WRITE LOGICALS_LNM "$!     ENDIF"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$APR_SHRP  APACHE$COMMON:[000000]APACHE$APR_SHRP'Suffix'.EXE"
+$ WRITE LOGICALS_LNM "$ ELSE"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$APR_SHRP"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$APR_SHR"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$APU_SHR"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$HTTPD_SHR"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$ROOT"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$SPECIFIC"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' APACHE$COMMON"
+$ WRITE LOGICALS_LNM "$     'LnmCmd' 'LnmTbl' SUEXEC"
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$! Install the Apache images"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!  APACHE$APR_SHRP"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF F$TRNLNM (""APACHE$APR_SHRP"") .NES. """" .AND. -"
+$ WRITE LOGICALS_LNM "     F$EDIT (ShrImg,""TRIM,UPCASE"") .EQS. ""INSTALL"""
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     IF F$FILE_ATTRIBUTES (""APACHE$APR_SHRP"",""KNOWN"")"
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$         InstallCmd = ""REPLACE"""
+$ WRITE LOGICALS_LNM "$     ELSE"
+$ WRITE LOGICALS_LNM "$         InstallCmd = ""ADD"""
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$     DEFINE /USER /NOLOG SYS$ERROR NL:"
+$ WRITE LOGICALS_LNM "$     DEFINE /USER /NOLOG SYS$OUTPUT NL:"
+$ WRITE LOGICALS_LNM "$     INSTALL 'InstallCmd' APACHE$APR_SHRP/HEADER_RESIDENT/OPEN/PROTECTED/SHARED"
+$ WRITE LOGICALS_LNM "$     STATUS = $STATUS"
+$ WRITE LOGICALS_LNM "$     IF F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NORMAL"" .AND. -"
+$ WRITE LOGICALS_LNM "         F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NOMSG"""
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$         WRITE SYS$OUTPUT F$MESSAGE (STATUS)"
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!  APACHE$APR_SHR"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF F$TRNLNM (""APACHE$APR_SHR"") .NES. """" .AND. -"
+$ WRITE LOGICALS_LNM "     F$EDIT (ShrImg,""TRIM,UPCASE"") .EQS. ""INSTALL"""
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     IF F$FILE_ATTRIBUTES (""APACHE$APR_SHR"",""KNOWN"")"
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$         InstallCmd = ""REPLACE"""
+$ WRITE LOGICALS_LNM "$     ELSE"
+$ WRITE LOGICALS_LNM "$         InstallCmd = ""ADD"""
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$     DEFINE /USER /NOLOG SYS$ERROR NL:"
+$ WRITE LOGICALS_LNM "$     DEFINE /USER /NOLOG SYS$OUTPUT NL:"
+$ WRITE LOGICALS_LNM "$     INSTALL 'InstallCmd' APACHE$APR_SHR/HEADER_RESIDENT/OPEN/SHARED"
+$ WRITE LOGICALS_LNM "$     STATUS = $STATUS"
+$ WRITE LOGICALS_LNM "$     IF F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NORMAL"" .AND. -"
+$ WRITE LOGICALS_LNM "         F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NOMSG"""
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$         WRITE SYS$OUTPUT F$MESSAGE (STATUS)"
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!  APACHE$APU_SHR"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF F$TRNLNM (""APACHE$APU_SHR"") .NES. """" .AND. -"
+$ WRITE LOGICALS_LNM "     F$EDIT (ShrImg,""TRIM,UPCASE"") .EQS. ""INSTALL"""
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     IF F$FILE_ATTRIBUTES (""APACHE$APU_SHR"",""KNOWN"")"
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$         InstallCmd = ""REPLACE"""
+$ WRITE LOGICALS_LNM "$     ELSE"
+$ WRITE LOGICALS_LNM "$         InstallCmd = ""ADD"""
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$     DEFINE /USER /NOLOG SYS$ERROR NL:"
+$ WRITE LOGICALS_LNM "$     DEFINE /USER /NOLOG SYS$OUTPUT NL:"
+$ WRITE LOGICALS_LNM "$     INSTALL 'InstallCmd' APACHE$APU_SHR/HEADER_RESIDENT/OPEN/SHARED"
+$ WRITE LOGICALS_LNM "$     STATUS = $STATUS"
+$ WRITE LOGICALS_LNM "$     IF F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NORMAL"" .AND. -"
+$ WRITE LOGICALS_LNM "         F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NOMSG"""
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$         WRITE SYS$OUTPUT F$MESSAGE (STATUS)"
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!  SUEXEC"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF F$TRNLNM (""SUEXEC"") .NES. """" .AND. -"
+$ WRITE LOGICALS_LNM "     F$EDIT (ShrImg,""TRIM,UPCASE"") .EQS. ""INSTALL"""
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     IF F$FILE_ATTRIBUTES (""SUEXEC"",""KNOWN"")"
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$         InstallCmd = ""REPLACE"""
+$ WRITE LOGICALS_LNM "$     ELSE"
+$ WRITE LOGICALS_LNM "$         InstallCmd = ""ADD"""
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$     DEFINE /USER /NOLOG SYS$ERROR NL:"
+$ WRITE LOGICALS_LNM "$     DEFINE /USER /NOLOG SYS$OUTPUT NL:"
+$ WRITE LOGICALS_LNM "$     INSTALL 'InstallCmd' SUEXEC/HEADER_RESIDENT/OPEN/SHARED/PRIV=(IMPERSONATE,SYSPRV)"
+$ WRITE LOGICALS_LNM "$     STATUS = $STATUS"
+$ WRITE LOGICALS_LNM "$     IF F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NORMAL"" .AND. -"
+$ WRITE LOGICALS_LNM "         F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NOMSG"""
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$         WRITE SYS$OUTPUT F$MESSAGE (STATUS)"
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!  SYS$LIBRARY:LDAP$SHR.EXE"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ IF F$EDIT (ShrImg,""TRIM,UPCASE"") .EQS. ""INSTALL"""
+$ WRITE LOGICALS_LNM "$ THEN"
+$ WRITE LOGICALS_LNM "$     IF .NOT. F$FILE_ATTRIBUTES (""SYS$LIBRARY:LDAP$SHR.EXE"",""KNOWN"")"
+$ WRITE LOGICALS_LNM "$     THEN"
+$ WRITE LOGICALS_LNM "$         InstallCmd = ""ADD"""
+$ WRITE LOGICALS_LNM "$         DEFINE /USER /NOLOG SYS$ERROR NL:"
+$ WRITE LOGICALS_LNM "$         DEFINE /USER /NOLOG SYS$OUTPUT NL:"
+$ WRITE LOGICALS_LNM "$         INSTALL 'InstallCmd' SYS$LIBRARY:LDAP$SHR.EXE/HEADER_RESIDENT/OPEN/SHARED"
+$ WRITE LOGICALS_LNM "$         STATUS = $STATUS"
+$ WRITE LOGICALS_LNM "$         IF F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NORMAL"" .AND. -"
+$ WRITE LOGICALS_LNM "             F$MESSAGE (STATUS, ""IDENT"") .NES. ""%NOMSG"""
+$ WRITE LOGICALS_LNM "$         THEN"
+$ WRITE LOGICALS_LNM "$             WRITE SYS$OUTPUT F$MESSAGE (STATUS)"
+$ WRITE LOGICALS_LNM "$         ENDIF"
+$ WRITE LOGICALS_LNM "$     ENDIF"
+$ WRITE LOGICALS_LNM "$ ENDIF"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$! Exit"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$ Verify = F$VERIFY (Verify)"
+$ WRITE LOGICALS_LNM "$ Exit"
+$ WRITE LOGICALS_LNM ""
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$! CreateSpecific
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!	Create the specific directories for the current node"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$! Inputs:"
+$ WRITE LOGICALS_LNM "$!	Host - Hostname (Node name) of the current node"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$!------------------------------------------------------------------------------"
+$ WRITE LOGICALS_LNM "$!"
+$ WRITE LOGICALS_LNM "$CreateSpecific:"
+$ WRITE LOGICALS_LNM "$	Parse_Style = F$GETJPI("""", ""PARSE_STYLE_PERM"")"
+$ WRITE LOGICALS_LNM "$	SET PROCESS/PARSE_STYLE=EXTENDED"
+$ WRITE LOGICALS_LNM "$"
+$ WRITE LOGICALS_LNM "$	InsDir = COMMON_ROOT - "".]"""
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host']"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.BIN]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.CGI-BIN]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.CONF]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.CONF.SSL_CRL]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.CONF.SSL_CRT]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.CONF.SSL_CRS]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.CONF.SSL_KEY]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.CONF.SSL_PRM]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.error]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.error.include]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.developer]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.faq]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.howto]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.images]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.misc]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.mod]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.platform]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.programs]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.rewrite]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.ssl]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.style]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.vhosts]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.style.css]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.style.lang]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.style.latex]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.style.scripts]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.style.xsl]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.HTDOCS.manual.style.xsl.util]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.ICONS]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.ICONS.small]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.LOGS]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.MODULES]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.OPENSSL]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.OPENSSL.COM]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.OPENSSL.CRT]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.OPENSSL.CSR]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.OPENSSL.DB]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.OPENSSL.EXE]"
+$ WRITE LOGICALS_LNM "$	CREATE /DIRECTORY /NOLOG 'InsDir'.SPECIFIC.'Host'.OPENSSL.KEY]"
+$ WRITE LOGICALS_LNM "$"
+$ WRITE LOGICALS_LNM "$	SET PROCESS/PARSE_STYLE='Parse_Style'"
+$ WRITE LOGICALS_LNM "$	Return"
+$ CLOSE LOGICALS_LNM
+$ SET FILE /PROT=W:RE 'LOGICALS_FIL'
+$!
+$ GOTO EXIT
+$!
+$! Process any file errors
+$!
+$CFG_ERR:
+$!
+$ SET NoOn
+$ IF F$TRNLNM ("LOGICALS_LNM") .NES. ""
+$ THEN
+$     CLOSE LOGICALS_LNM
+$     IF F$SEARCH (LOGICALS_FIL) .NES. "" THEN DELETE /NOLOG /NOCONFIRM 'LOGICALS_FIL';*
+$ ENDIF
+$!
+$ GOTO EXIT
+$!
+$!------------------------------------------------------------------------------
+$! Run the Apache Product Remove
+$!------------------------------------------------------------------------------
+$!
+$REMOVE:
+$!
+$! If we can't find the Apache logicals file, then let's abort
+$!
+$ IF F$SEARCH ("SYS$MANAGER:APACHE$LOGICALS.COM") .EQS. ""
+$ THEN
+$     IF F$SEARCH("SYS$MANAGER:APACHE$FIS.COM") .NES. ""
+$     THEN
+$         COPY/NOLOG/NOCONFIRM SYS$MANAGER:APACHE$FIS.COM SYS$COMMON:[SYSMGR]APACHE$LOGICALS.COM
+$     ELSE
+$         SAY " "
+$         SAY "Unable to locate SYS$MANAGER:APACHE$LOGICALS.COM, aborting installation ..."
+$         SAY " "
+$         STATUS = 44
+$         GOTO EXIT
+$     ENDIF
+$ ENDIF
+$!
+$! If the Apache logicals are not defined system wide, then define them locally
+$!
+$ IF F$TRNLNM ("APACHE$COMMON", "LNM$SYSTEM", 0, "EXECUTIVE") .EQS. ""
+$ THEN
+$     @SYS$MANAGER:APACHE$LOGICALS "Define /NoLog" "/System /Executive" "" "NoCreate"
+$ ENDIF
+$!
+$! Shutdown any active server
+$!
+$ IF F$SEARCH ("SYS$STARTUP:APACHE$SHUTDOWN.COM") .NES. ""
+$ THEN
+$     DEFINE /NOLOG SYS$OUTPUT NL:
+$     DEFINE /NOLOG SYS$ERROR  NL:
+$     @SYS$STARTUP:APACHE$SHUTDOWN
+$     DEASSIGN SYS$OUTPUT
+$     DEASSIGN SYS$ERROR
+$ ENDIF
+$!
+$! Initialize the delete directories
+$!
+$ DEL_DIR = ""
+$ DEL_CNT = 0
+$!
+$! Remove the HTDOCS directory tree if it's found
+$!
+$ HTDOCS_DIR = "APACHE$COMMON:[000000]HTDOCS.DIR"
+$ IF F$SEARCH ("''HTDOCS_DIR'") .NES. ""
+$ THEN
+$     IF DEL_DIR .NES. "" THEN DEL_DIR = DEL_DIR + " & "
+$     DEL_DIR = DEL_DIR + "Htdocs"
+$     DEL_CNT = DEL_CNT + 1
+$ ENDIF
+$!
+$! Remove the ICONS directory tree if it's found
+$!
+$ ICONS_DIR = "APACHE$COMMON:[000000]ICONS.DIR"
+$ IF F$SEARCH ("''ICONS_DIR'") .NES. ""
+$ THEN
+$     IF DEL_DIR .NES. "" THEN DEL_DIR = DEL_DIR + " & "
+$     DEL_DIR = DEL_DIR + "Icons"
+$     DEL_CNT = DEL_CNT + 1
+$ ENDIF
+$!
+$! If we found directories to be deleted, then prompt the user
+$!
+$ IF DEL_DIR .NES. ""
+$ THEN
+$     SAY ""
+$     SAY "''F$FAO ("Deleting the Apache ''DEL_DIR' directory tree!0UL!%S will remove ALL user", DEL_CNT)'"
+$     SAY "data stored within."
+$     SAY ""
+$     ASK "''F$FAO ("Delete the Apache ''DEL_DIR' directory tree!0UL!%S ? [NO]: ", DEL_CNT)'" ANS
+$     SAY ""
+$     ANS = F$EDIT (ANS,"TRIM,UPCASE")
+$     IF ANS .EQS. "" THEN ANS = "NO"
+$     IF ANS .EQS. "1" .OR. -
+         ANS .EQS. F$EXTRACT (0, F$LENGTH (ANS), "YES") .OR. -
+         ANS .EQS. F$EXTRACT (0, F$LENGTH (ANS), "TRUE")
+$     THEN
+$         SAY "  This could take a minute or two.  . . . "
+$         SAY ""
+$         IF F$SEARCH ("''HTDOCS_DIR'") .NES. "" THEN CALL REMOVE_TREE "''HTDOCS_DIR'"
+$         IF F$SEARCH ("''ICONS_DIR'") .NES. "" THEN CALL REMOVE_TREE "''ICONS_DIR'"
+$     ENDIF
+$     SAY ""
+$ ENDIF
+$!
+$! Deassign the Apache logicals
+$!
+$ IF F$TRNLNM ("APACHE$COMMON", "LNM$SYSTEM", 0, "EXECUTIVE") .EQS. ""
+$ THEN
+$     @SYS$MANAGER:APACHE$LOGICALS "Deassign" "/Process /Executive" "Uninstall"
+$ ELSE
+$     @SYS$MANAGER:APACHE$LOGICALS "Deassign" "" "Uninstall"
+$ ENDIF
+$!
+$! Remove the Apache system files
+$!
+$ CALL REMOVE_FILE SYS$COMMON:[SYSMGR]APACHE$CONFIG.COM;*
+$ CALL REMOVE_FILE SYS$COMMON:[SYSMGR]APACHE$SYMBOLS.COM;*
+$ CALL REMOVE_FILE SYS$COMMON:[SYSMGR]APACHE$LOGICALS.COM;*
+$ CALL REMOVE_FILE SYS$COMMON:[SYSMGR]APACHE$FIS.COM;*
+$ CALL REMOVE_FILE SYS$COMMON:[SYS$STARTUP]APACHE$STARTUP.COM;*
+$ CALL REMOVE_FILE SYS$COMMON:[SYS$STARTUP]APACHE$SHUTDOWN.COM;*
+$ CALL REMOVE_FILE SYS$COMMON:[SYSHLP]CSWS_2_4_38.release_notes;*
+$!
+$ GOTO EXIT
+$!
+$!------------------------------------------------------------------------------
+$! Remove a Directory Tree
+$!------------------------------------------------------------------------------
+$!
+$REMOVE_TREE: SUBROUTINE
+$!
+$ IF F$SEARCH (P1) .EQS. ""
+$ THEN
+$     SAY ""
+$     SAY "''P1' was not found ! ..."
+$     SAY ""
+$     EXIT
+$ ENDIF
+$!
+$ P1_DEV = F$PARSE ("''P1'",,,"DEVICE")
+$ P1_DIR = F$PARSE ("''P1'",,,"DIRECTORY")
+$ P1_NAM = F$PARSE ("''P1'",,,"NAME")
+$ P1_TYP = F$PARSE ("''P1'",,,"TYPE")
+$ P1_VER = F$PARSE ("''P1'",,,"VERSION")
+$!
+$ IF P1_NAM .EQS. "" .OR. P1_TYP .EQS. ""
+$ THEN
+$     SAY ""
+$     SAY "''P1' is not a file specification ..."
+$     SAY ""
+$     EXIT
+$ ENDIF
+$!
+$ IF .NOT. F$FILE_ATTRIBUTES (P1, "DIRECTORY")
+$ THEN
+$     SAY ""
+$     SAY "''P1' is not a directory specification ..."
+$     SAY ""
+$     EXIT
+$ ENDIF
+$!
+$ TREE_LVL = 1
+$ TREE_DIR_'TREE_LVL' = P1
+$ TREE_SCH_'TREE_LVL' = P1_DEV + P1_DIR - "]" + ".''P1_NAM']*.*;*"
+$ TREE_SCH = TREE_SCH_'TREE_LVL'
+$!
+$TREE_LOOP:
+$!
+$ FILE_NAME = F$SEARCH (TREE_SCH_'TREE_LVL', TREE_LVL)
+$ IF FILE_NAME .NES. ""
+$ THEN
+$     IF F$FILE_ATTRIBUTES (FILE_NAME, "DIRECTORY")
+$     THEN
+$         FN_DEV = F$PARSE ("''FILE_NAME'",,,"DEVICE")
+$         FN_DIR = F$PARSE ("''FILE_NAME'",,,"DIRECTORY")
+$         FN_NAM = F$PARSE ("''FILE_NAME'",,,"NAME")
+$         FN_TYP = F$PARSE ("''FILE_NAME'",,,"TYPE")
+$         FN_VER = F$PARSE ("''FILE_NAME'",,,"VERSION")
+$         TREE_LVL = TREE_LVL + 1
+$         TREE_DIR_'TREE_LVL' = FILE_NAME
+$         TREE_SCH_'TREE_LVL' = FN_DEV + FN_DIR - "]" + ".''FN_NAM']*.*;*"
+$     ELSE
+$         CALL REMOVE_FILE 'FILE_NAME'
+$         IF .NOT. (FILE_STATUS .AND. 1)
+$	  THEN
+$	      SAY "An error occurred deleting file ''FILE_NAME'"
+$	      SAY "Please delete tree ''P1' manually."
+$	      EXIT
+$	  ENDIF
+$     ENDIF
+$     GOTO TREE_LOOP
+$ ELSE
+$     IF TREE_LVL .GT. 1
+$     THEN
+$         FILE_NAME = TREE_DIR_'TREE_LVL'
+$         CALL REMOVE_FILE 'FILE_NAME'
+$         IF .NOT. (FILE_STATUS .AND. 1)
+$	  THEN
+$	      SAY "An error occurred deleting file ''FILE_NAME'"
+$	      SAY "Please delete tree ''P1' manually."
+$	      EXIT
+$	  ENDIF
+$         TREE_LVL = TREE_LVL - 1
+$         GOTO TREE_LOOP
+$     ENDIF
+$ ENDIF
+$!
+$ EXIT
+$!
+$ENDSUBROUTINE
+$!
+$!------------------------------------------------------------------------------
+$! Remove a File
+$!------------------------------------------------------------------------------
+$!
+$REMOVE_FILE: SUBROUTINE
+$!
+$ INSTALL := $ INSTALL /COMMAND
+$ FILE_SPEC = F$PARSE ("''P1'",";*")
+$!
+$FILE_LOOP:
+$!
+$ FILE_NAME = F$SEARCH ("''FILE_SPEC'")
+$ IF FILE_NAME .NES. ""
+$ THEN
+$     FILE_VERS = F$PARSE (FILE_NAME,,,"VERSION")
+$     FILE_NAME = FILE_NAME - FILE_VERS
+$     IF F$FILE_ATTRIBUTES (FILE_NAME, "KNOWN") THEN INSTALL REMOVE 'FILE_NAME'
+$     DEFINE /USER SYS$ERROR NL:
+$     DEFINE /USER SYS$OUTPUT NL:
+$     SET FILE /PROTECTION=(W:RWED) 'FILE_NAME';*
+$     DEFINE /USER SYS$ERROR NL:
+$     DEFINE /USER SYS$OUTPUT NL:
+$     DELETE /NOLOG /NOCONFIRM 'FILE_NAME';*
+$     FILE_STATUS == $STATUS
+$     IF .NOT. (FILE_STATUS .AND. 1) THEN EXIT
+$     GOTO FILE_LOOP
+$ ENDIF
+$!
+$ EXIT
+$!
+$ENDSUBROUTINE
+$!
+$!------------------------------------------------------------------------------
+$! Exit the Apache Install Remove
+$!------------------------------------------------------------------------------
+$!
+$EXIT:
+$!
+$ IF F$TRNLNM ("TTY$COMMAND") .NES. ""
+$ THEN
+$     CLOSE TTY$COMMAND
+$ ENDIF
+$!
+$ IF F$TYPE (STATUS) .EQS. "" THEN STATUS = 1
+$ SET PROCESS/PARSE_STYLE='Parse_Style'
+$ Verify = F$VERIFY (Verify)
+$ EXIT 'STATUS'

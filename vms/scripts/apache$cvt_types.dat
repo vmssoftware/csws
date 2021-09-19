@@ -1,0 +1,8 @@
+# APACHE$CVT_TYPES.DAT
+#
+#	File types that get converted by APACHE$CONVERT_STREAMLF.COM
+#
+
+.HTM*		#All HTML files (.HTM, .HTML, .HTML.FR, etc)
+.SHTML		#Server-side includes
+.TXT		#All TXT files
